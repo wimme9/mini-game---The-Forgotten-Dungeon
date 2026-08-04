@@ -68,7 +68,7 @@ export default class MenuScene extends Phaser.Scene {
             this.showHowToPlayModal();
         });
 
-        this.add.text(width / 2, height - 30, "PRESS START TO EXPLORE THE DUNGEON", { font: "16px monospace", fill: "#4cc9f0", alpha: 0.6 }).setOrigin(0.5);
+        this.add.text(width / 2, height - 30, "PRESS START TO EXPLORE THE DUNGEON", { font: "12px monospace", fill: "#4cc9f0", alpha: 0.6 }).setOrigin(0.5);
     }
 
     createCustomButton(x, y, label, fillHex, borderHex, onClick) {
