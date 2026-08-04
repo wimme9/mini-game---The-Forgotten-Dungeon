@@ -241,6 +241,7 @@ pauseButton.setInteractive({ useHandCursor: true });
 pauseButton.on("pointerover", () => pauseButton.setBackgroundColor("#2e8b57"));
 pauseButton.on("pointerout", () => pauseButton.setBackgroundColor("#1a472a"));
 pauseButton.on("pointerdown", () => {
+    playSoundSafely(this, 'sfx_click_npc');
     this.pauseAudio();
     this.scene.pause();
     this.scene.launch("PauseScene");

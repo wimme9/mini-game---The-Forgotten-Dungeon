@@ -3,6 +3,17 @@ export default class MenuScene extends Phaser.Scene {
         super("MenuScene");
     }
 
+    preload() {
+        if (!this.cache.audio.exists('sfx_click_npc')) {
+            this.load.audio('sfx_click_npc', 'sound/เสียงตอนคลิ๊กคำใบ้และคุยกับNPC.mp3');
+        }
+    }
+
+    // เล่นเสียงคลิกปุ่ม ใช้ร่วมกันทุกปุ่มในหน้านี้
+    playClick() {
+        try { this.sound.play('sfx_click_npc'); } catch (e) {}
+    }
+
     create() {
         // พื้นหลังสีเขียวสนามฟุตบอล
         this.add.rectangle(0, 0, 1480, 900, 0x1a472a).setOrigin(0, 0);
@@ -59,6 +70,7 @@ export default class MenuScene extends Phaser.Scene {
         startBtn.on('pointerover', () => startBtn.setBackgroundColor('#ffffff'));
         startBtn.on('pointerout', () => startBtn.setBackgroundColor('#ffe066'));
         startBtn.on('pointerdown', () => {
+            this.playClick();
             this.scene.start("GameplayScene");
         });
 

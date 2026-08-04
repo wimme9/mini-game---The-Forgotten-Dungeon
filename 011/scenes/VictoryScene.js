@@ -3,6 +3,11 @@ export default class VictoryScene extends Phaser.Scene {
         super("VictoryScene");
     }
 
+    // เล่นเสียงคลิกปุ่ม (โหลดไว้แล้วจาก GameplayScene ที่ยังทำงานอยู่เบื้องหลัง)
+    playClick() {
+        try { this.sound.play('sfx_click_npc'); } catch (e) {}
+    }
+
     create() {
         // 1. ซ่อน UI ของ GameplayScene เพื่อไม่ให้โชว์ซ้อนด้านล่าง
         const gameplayScene = this.scene.get('GameplayScene');
@@ -61,6 +66,7 @@ export default class VictoryScene extends Phaser.Scene {
         restartBtn.on('pointerover', () => restartBtn.setBackgroundColor('#ffffff'));
         restartBtn.on('pointerout', () => restartBtn.setBackgroundColor('#ffe066'));
         restartBtn.on('pointerdown', () => {
+            this.playClick();
             this.scene.stop("GameplayScene");
             this.scene.start("GameplayScene");
         });
@@ -74,6 +80,7 @@ export default class VictoryScene extends Phaser.Scene {
         menuBtn.on('pointerover', () => menuBtn.setBackgroundColor('#6b4a32'));
         menuBtn.on('pointerout', () => menuBtn.setBackgroundColor('#4a3220'));
         menuBtn.on('pointerdown', () => {
+            this.playClick();
             this.scene.stop("GameplayScene");
             this.scene.start("MenuScene");
         });

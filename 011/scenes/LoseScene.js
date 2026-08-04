@@ -8,6 +8,11 @@ export default class LoseScene extends Phaser.Scene {
         this.reason = (data && data.reason) || 'time';
     }
 
+    // เล่นเสียงคลิกปุ่ม (โหลดไว้แล้วจาก GameplayScene ที่ยังทำงานอยู่เบื้องหลัง)
+    playClick() {
+        try { this.sound.play('sfx_click_npc'); } catch (e) {}
+    }
+
     create() {
         // 1. ซ่อน UI ของ GameplayScene ที่ล็อกจอไว้ ไม่ให้โชว์ซ้อนด้านล่าง
         const gameplayScene = this.scene.get('GameplayScene');
@@ -60,6 +65,7 @@ export default class LoseScene extends Phaser.Scene {
         retryBtn.on('pointerover', () => retryBtn.setBackgroundColor('#ffffff'));
         retryBtn.on('pointerout', () => retryBtn.setBackgroundColor('#ffe066'));
         retryBtn.on('pointerdown', () => {
+            this.playClick();
             this.scene.stop("GameplayScene");
             this.scene.start("GameplayScene");
         });
@@ -73,9 +79,12 @@ export default class LoseScene extends Phaser.Scene {
         menuBtn.on('pointerover', () => menuBtn.setBackgroundColor('#6b4a32'));
         menuBtn.on('pointerout', () => menuBtn.setBackgroundColor('#4a3220'));
         menuBtn.on('pointerdown', () => {
-            this.sound.stopAll();
-            this.scene.stop("GameplayScene");
-            this.scene.start("MenuScene");
+            this.playClick();
+            this.time.delayedCall(150, () => {
+                this.sound.stopAll();
+                this.scene.stop("GameplayScene");
+                this.scene.start("MenuScene");
+            });
         });
     }
 }

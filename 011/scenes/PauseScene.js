@@ -3,6 +3,11 @@ export default class PauseScene extends Phaser.Scene {
         super("PauseScene");
     }
 
+    // เล่นเสียงคลิกปุ่ม (โหลดไว้แล้วจาก GameplayScene ที่ยังทำงานอยู่เบื้องหลัง)
+    playClick() {
+        try { this.sound.play('sfx_click_npc'); } catch (e) {}
+    }
+
     create() {
         // พื้นหลังโปร่งแสงสีดำ
         this.add.rectangle(0, 0, 1480, 900, 0x000000, 0.7).setOrigin(0, 0);
@@ -28,6 +33,7 @@ export default class PauseScene extends Phaser.Scene {
         resumeButton.on("pointerover", () => resumeButton.setBackgroundColor("#3cb371"));
         resumeButton.on("pointerout", () => resumeButton.setBackgroundColor("#2e8b57"));
         resumeButton.on("pointerdown", () => {
+            this.playClick();
             this.scene.stop();
             const gameplay = this.scene.get("GameplayScene");
             if (gameplay && gameplay.resumeAudio) gameplay.resumeAudio();
@@ -43,9 +49,12 @@ export default class PauseScene extends Phaser.Scene {
         quitButton.on("pointerover", () => quitButton.setBackgroundColor("#ff0000"));
         quitButton.on("pointerout", () => quitButton.setBackgroundColor("#8b0000"));
         quitButton.on("pointerdown", () => {
-            this.sound.stopAll();
-            this.scene.stop("GameplayScene");
-            this.scene.start("MenuScene");
+            this.playClick();
+            this.time.delayedCall(150, () => {
+                this.sound.stopAll();
+                this.scene.stop("GameplayScene");
+                this.scene.start("MenuScene");
+            });
         });
     }
 }
