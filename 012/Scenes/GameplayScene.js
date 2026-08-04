@@ -3,6 +3,18 @@ import { Theme } from "./Theme.js";
 export default class GameplayScene extends Phaser.Scene {
     constructor() {
         super("GameplayScene");
+
+        // ================= ผูก this ให้ event handler ล่วงหน้า =================
+        // ต้องสร้าง reference ที่ "คงที่" ตัวเดียวสำหรับแต่ละ handler
+        // (bind ใน constructor ครั้งเดียว ไม่ใช่สร้างฟังก์ชันใหม่ทุกครั้งใน create())
+        // เพื่อให้ removeEventListener ใน shutdown() ถอดตัวเดิมออกได้ถูกต้อง
+        // ถ้าใช้ arrow function inline แบบเดิม ทุกครั้งที่ create() รันใหม่
+        // (เช่น restart scene) จะได้ function reference ใหม่เสมอ ทำให้
+        // removeEventListener หาตัวเดิมไม่เจอ -> listener สะสมไปเรื่อยๆ
+        this.onKeyDown = this.onKeyDown.bind(this);
+        this.onKeyUp = this.onKeyUp.bind(this);
+        this.onCanvasClick = this.onCanvasClick.bind(this);
+        this.onPostRender = this.onPostRender.bind(this);
     }
 
     // ================= PRELOAD: โหลดรูปภาพ/เสียงทั้งหมด =================
@@ -59,8 +71,6 @@ export default class GameplayScene extends Phaser.Scene {
     }
 
     // ================= CREATE: ตั้งค่าเริ่มต้น + Event Listener =================
-
-        // ================= CREATE: ตั้งค่าเริ่มต้น + Event Listener =================
     create() {
         // ----- ปุ่ม Pause (หยุดเกมชั่วคราว) -----
         // หมายเหตุ: เดิมสร้างด้วย this.add.text() ซึ่งเป็น Phaser GameObject
@@ -194,37 +204,76 @@ export default class GameplayScene extends Phaser.Scene {
         // ================= ปุ่มและการคลิก =================
         this.keys = { w: false, a: false, s: false, d: false };
 
+        // ================= ผูก Event Listener (ครั้งเดียวต่อการเข้า scene) =================
+        // สำคัญ: ใช้ named/bound method (this.onKeyDown ฯลฯ ที่ bind ไว้ใน constructor)
+        // แทน arrow function inline แบบเดิม เพื่อให้ removeEventListener ใน shutdown()
+        // ถอด listener ตัวเดิมออกได้จริง ไม่งั้นทุกครั้งที่ restart scene จะมี
+        // listener ใหม่มาผูกซ้อนทับของเก่าเรื่อยๆ ทำให้กดปุ่มครั้งเดียวแต่ผลลัพธ์
+        // เกิดขึ้นหลายครั้ง (input เพี้ยน)
         // ย้ายปุ่มควบคุมมาดักจับที่ window เพื่อป้องกันบัค Canvas ไม่ Focus
-        window.addEventListener("keydown", (e) => {
-            let key = e.key.toLowerCase();
-            if (key === "w" || key === "arrowup") this.keys.w = true;
-            if (key === "a" || key === "arrowleft") this.keys.a = true;
-            if (key === "s" || key === "arrowdown") this.keys.s = true;
-            if (key === "d" || key === "arrowright") this.keys.d = true;
-        });
-
-        window.addEventListener("keyup", (e) => {
-            let key = e.key.toLowerCase();
-            if (key === "w" || key === "arrowup") this.keys.w = false;
-            if (key === "a" || key === "arrowleft") this.keys.a = false;
-            if (key === "s" || key === "arrowdown") this.keys.s = false;
-            if (key === "d" || key === "arrowright") this.keys.d = false;
-        });
-
-        this.canvas.addEventListener("click", (e) => this.handleClick(e));
+        window.addEventListener("keydown", this.onKeyDown);
+        window.addEventListener("keyup", this.onKeyUp);
+        this.canvas.addEventListener("click", this.onCanvasClick);
 
         // สำคัญ: Phaser จะ clear canvas เป็นสีดำทุกเฟรมหลังจาก update() ทำงานเสร็จ
         // (เพราะ scene ไม่มี game object ของ Phaser เลย เราวาดเองผ่าน ctx ทั้งหมด)
         // เลยต้องย้ายการวาด (this.draw()) มาทำงาน "หลัง" Phaser render เสร็จแล้วแทน
         // โดยฟังอีเวนต์ postrender ของเกม ไม่งั้นภาพที่วาดจะโดนลบทิ้งทุกเฟรม จอเลยดำ
-        this.game.events.on(Phaser.Core.Events.POST_RENDER, () => {
-            // สำคัญ: ถ้า scene นี้ถูก pause อยู่ (เช่นตอนเปิด PauseScene ทับ)
-            // ต้อง "ไม่" วาดซ้ำ ไม่งั้นภาพจาก ctx จะไปทับฉาก PauseScene ทุกเฟรม
-            // ทำให้ดูเหมือน PauseScene ไม่ขึ้นมาเลยทั้งที่จริงๆ มันเปิดอยู่
-            if (this.scene.isActive()) {
-                this.draw();
-            }
-        });
+        // ใช้ this.onPostRender (bound reference เดิม) เพื่อให้ off() ตอน shutdown
+        // ถอดตัวเดิมออกได้ถูกต้อง (ไม่งั้น draw() จะถูกเรียกซ้อนหลายรอบหลัง restart)
+        this.game.events.on(Phaser.Core.Events.POST_RENDER, this.onPostRender);
+
+        // ================= ถอด Listener ทั้งหมดตอนออกจาก/รีสตาร์ต scene =================
+        // Phaser จะยิง SHUTDOWN ให้เองทั้งตอน scene.stop(), scene.restart(),
+        // และก่อนที่ scene.start() ตัวใหม่จะเริ่ม create() ของ instance ถัดไป
+        // ผูก listener นี้ไว้ด้วย this.shutdown (bound) เพื่อความชัดเจนและกันบัค this
+        this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.shutdown, this);
+        this.events.once(Phaser.Scenes.Events.DESTROY, this.shutdown, this);
+    }
+
+    // ================= ถอด Event Listener ทั้งหมด (เรียกตอน scene shutdown/destroy) =================
+    shutdown() {
+        window.removeEventListener("keydown", this.onKeyDown);
+        window.removeEventListener("keyup", this.onKeyUp);
+        if (this.canvas) {
+            this.canvas.removeEventListener("click", this.onCanvasClick);
+        }
+        if (this.game && this.game.events) {
+            this.game.events.off(Phaser.Core.Events.POST_RENDER, this.onPostRender);
+        }
+    }
+
+    // ================= Handler: กดปุ่มคีย์บอร์ดลง =================
+    onKeyDown(e) {
+        let key = e.key.toLowerCase();
+        if (key === "w" || key === "arrowup") this.keys.w = true;
+        if (key === "a" || key === "arrowleft") this.keys.a = true;
+        if (key === "s" || key === "arrowdown") this.keys.s = true;
+        if (key === "d" || key === "arrowright") this.keys.d = true;
+    }
+
+    // ================= Handler: ปล่อยปุ่มคีย์บอร์ด =================
+    onKeyUp(e) {
+        let key = e.key.toLowerCase();
+        if (key === "w" || key === "arrowup") this.keys.w = false;
+        if (key === "a" || key === "arrowleft") this.keys.a = false;
+        if (key === "s" || key === "arrowdown") this.keys.s = false;
+        if (key === "d" || key === "arrowright") this.keys.d = false;
+    }
+
+    // ================= Handler: คลิกบน canvas (ส่งต่อให้ handleClick) =================
+    onCanvasClick(e) {
+        this.handleClick(e);
+    }
+
+    // ================= Handler: วาดฉากหลัง Phaser render เสร็จในแต่ละเฟรม =================
+    onPostRender() {
+        // สำคัญ: ถ้า scene นี้ถูก pause อยู่ (เช่นตอนเปิด PauseScene ทับ)
+        // ต้อง "ไม่" วาดซ้ำ ไม่งั้นภาพจาก ctx จะไปทับฉาก PauseScene ทุกเฟรม
+        // ทำให้ดูเหมือน PauseScene ไม่ขึ้นมาเลยทั้งที่จริงๆ มันเปิดอยู่
+        if (this.scene.isActive()) {
+            this.draw();
+        }
     }
 
     // ================= จัดการคลิกเมาส์ (แยกจาก create เพื่อความอ่านง่าย) =================
